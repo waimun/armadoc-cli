@@ -10,7 +10,8 @@ import {
   redeemCode,
   refreshGrant,
   TokenError,
-  USER_AGENT
+  USER_AGENT,
+  userAgent
 } from './api.js'
 import { readCredentials, writeCredentials } from './store.js'
 
@@ -48,6 +49,17 @@ const tokens = (n) => json(200, { access_token: `A${n}`, refresh_token: `R${n}` 
 
 it('names this client and its version in the User-Agent', () => {
   expect(USER_AGENT).toBe(`armadoc-cli/${pkg.version}`)
+})
+
+it('adds the MCP host as a comment, reduced to token characters', () => {
+  expect(userAgent({ name: 'claude-ai', version: '0.12.0' })).toBe(
+    `${USER_AGENT} (mcp; claude-ai/0.12.0)`
+  )
+  expect(userAgent({ name: 'Visual Studio Code (Insiders)' })).toBe(
+    `${USER_AGENT} (mcp; Visual-Studio-Code-Insiders-)`
+  )
+  expect(userAgent({ name: 'x'.repeat(100) })).toBe(`${USER_AGENT} (mcp; ${'x'.repeat(64)})`)
+  expect(userAgent(undefined)).toBe(USER_AGENT)
 })
 
 describe('token grants', () => {

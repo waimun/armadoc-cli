@@ -3,6 +3,18 @@ import { withRefreshLock, writeCredentials } from './store.js'
 
 export const USER_AGENT = `armadoc-cli/${pkg.version}`
 
+const token = (value) =>
+  String(value)
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .slice(0, 64)
+
+// Appends the MCP host, as named in its clientInfo.
+export const userAgent = (host) => {
+  if (!host?.name) return USER_AGENT
+  const version = host.version ? `/${token(host.version)}` : ''
+  return `${USER_AGENT} (mcp; ${token(host.name)}${version})`
+}
+
 const REFRESH_TIMEOUT_MS = 10_000
 const REFRESH_IDLE_MS = 30 * 24 * 60 * 60 * 1000
 
@@ -37,10 +49,10 @@ const readBody = async (response) => {
   }
 }
 
-const tokenGrant = async ({ apiBase, params, fetch, signal }) => {
+const tokenGrant = async ({ apiBase, params, fetch, signal, userAgent = USER_AGENT }) => {
   const response = await fetch(`${apiBase}/oauth/token`, {
     method: 'POST',
-    headers: { 'User-Agent': USER_AGENT },
+    headers: { 'User-Agent': userAgent },
     body: new URLSearchParams(params),
     signal
   })
@@ -77,16 +89,24 @@ export const refreshGrant = ({
   apiBase,
   refreshToken,
   fetch = globalThis.fetch,
-  timeoutMs = REFRESH_TIMEOUT_MS
+  timeoutMs = REFRESH_TIMEOUT_MS,
+  userAgent
 }) =>
   tokenGrant({
     apiBase,
     fetch,
+    userAgent,
     params: { grant_type: 'refresh_token', refresh_token: refreshToken },
     signal: AbortSignal.timeout(timeoutMs)
   })
 
-export const createClient = ({ apiBase, dir, accessToken = null, fetch = globalThis.fetch }) => {
+export const createClient = ({
+  apiBase,
+  dir,
+  accessToken = null,
+  fetch = globalThis.fetch,
+  userAgent = USER_AGENT
+}) => {
   let current = accessToken
   let inflight = null
 
@@ -96,7 +116,12 @@ export const createClient = ({ apiBase, dir, accessToken = null, fetch = globalT
 
       let tokens
       try {
-        tokens = await refreshGrant({ apiBase, refreshToken: credentials.refreshToken, fetch })
+        tokens = await refreshGrant({
+          apiBase,
+          refreshToken: credentials.refreshToken,
+          fetch,
+          userAgent
+        })
       } catch (error) {
         if (error instanceof TokenError && error.error === 'invalid_grant') {
           throw new PairingError(
@@ -126,7 +151,7 @@ export const createClient = ({ apiBase, dir, accessToken = null, fetch = globalT
     fetch(url, {
       method,
       headers: {
-        'User-Agent': USER_AGENT,
+        'User-Agent': userAgent,
         Authorization: `Bearer ${current}`,
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
       },

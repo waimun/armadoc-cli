@@ -9,6 +9,7 @@
     "directory": "packages/cli"
   },
   "homepage": "https://armadoc.link",
+  "mcpName": "link.armadoc/armadoc",
   "bin": {
     "armadoc": "src/bin.js"
   },
@@ -17,7 +18,9 @@
     "!src/**/*.test.js"
   ],
   "dependencies": {
-    "@armadoc/crypto": "0.1.0"
+    "@armadoc/crypto": "0.1.0",
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "zod": "^4.6.5"
   },
   "engines": {
     "node": ">=24"

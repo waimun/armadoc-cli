@@ -24,7 +24,7 @@ export const onStage = (stage, preposition) => (stage === 'prod' ? '' : ` ${prep
 
 const xdgDir = (value, fallback) => (value && isAbsolute(value) ? value : fallback)
 
-const expandHome = (path, home) =>
+export const expandHome = (path, home) =>
   path === '~' || path.startsWith('~/') ? join(home, path.slice(1)) : path
 
 const absolute = (path, name) => {

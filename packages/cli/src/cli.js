@@ -14,6 +14,7 @@ import {
   listenForCallback,
   MAX_LABEL_LENGTH
 } from './pairing.js'
+import { serve } from './server.js'
 import {
   clearStage,
   readCredentials,
@@ -29,7 +30,8 @@ const NAME_RULE = "2 to 50 characters: letters, spaces, ' and -"
 const USAGE = `Usage:
   armadoc login [--label <label>] [--name <name>]  Pair this machine and enroll a key
   armadoc logout                                   Delete the local credentials
-  armadoc status                                   Show the pairing`
+  armadoc status                                   Show the pairing
+  armadoc mcp                                      Run the MCP server, for an MCP host to start`
 
 export class UsageError extends Error {}
 
@@ -217,7 +219,7 @@ const status = async (ctx) => {
   return credentials ? 0 : 1
 }
 
-const COMMANDS = { login, logout, status }
+const COMMANDS = { login, logout, status, mcp: serve }
 
 export const run = async (argv, ctx) => {
   try {
