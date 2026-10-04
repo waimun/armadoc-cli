@@ -9,6 +9,9 @@
     "directory": "packages/cli"
   },
   "homepage": "https://armadoc.link",
+  "bin": {
+    "armadoc": "src/bin.js"
+  },
   "files": [
     "src",
     "!src/**/*.test.js"
