@@ -1,0 +1,24 @@
+{
+  "name": "@armadoc/crypto",
+  "version": "0.1.0",
+  "description": "The end-to-end encryption core shared by the Armadoc web app and CLI",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/waimun/armadoc-cli.git",
+    "directory": "packages/crypto"
+  },
+  "homepage": "https://armadoc.link/security",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.js",
+    "!src/fixtures"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "armadoc",
+  "version": "0.1.0",
+  "description": "The Armadoc CLI and local MCP server for end-to-end encrypted document sharing",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/waimun/armadoc-cli.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://armadoc.link",
+  "files": [
+    "src",
+    "!src/**/*.test.js"
+  ],
+  "dependencies": {
+    "@armadoc/crypto": "0.1.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

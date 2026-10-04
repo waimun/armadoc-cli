@@ -1,0 +1,5 @@
+node_modules
+.direnv
+*.local.md
+.idea
+.DS_Store

@@ -1,0 +1,19 @@
+{
+  "name": "armadoc-cli-workspace",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/crypto",
+    "packages/cli"
+  ],
+  "scripts": {
+    "test": "biome ci --error-on-warnings && vitest run"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

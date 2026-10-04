@@ -1,0 +1,58 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "asNeeded",
+      "trailingCommas": "none"
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/crypto/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "window": "Node has no `window`, and the crypto core must run there. Use `globalThis`.",
+                  "document": "Node has no DOM, and the crypto core must run there. Take the data as an argument.",
+                  "indexedDB": "The crypto core holds no state. Store keys in the client and pass them in.",
+                  "localStorage": "The crypto core holds no state. Store data in the client and pass it in.",
+                  "Buffer": "Browsers have no `Buffer`, and the crypto core must run there. Use `Uint8Array`.",
+                  "process": "Browsers have no `process`, and the crypto core must run there. Take the value as an argument."
+                }
+              }
+            },
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**"],
+                    "message": "`@armadoc/crypto` is published on its own, so a file outside its folder is missing once installed. Move the code into `packages/crypto/src`."
+                  },
+                  {
+                    "group": ["node:*"],
+                    "message": "Browsers have no Node built-ins, and the crypto core must run there. Use `globalThis.crypto` and other web-standard APIs."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
