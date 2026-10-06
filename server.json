@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "link.armadoc/armadoc",
+  "title": "Armadoc",
+  "description": "Send and read end-to-end encrypted documents. Your private key never leaves your machine.",
+  "version": "0.1.0",
+  "websiteUrl": "https://armadoc.link",
+  "repository": {
+    "url": "https://github.com/waimun/armadoc-cli",
+    "source": "github",
+    "id": "1403665963",
+    "subfolder": "packages/cli"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "armadoc",
+      "version": "0.1.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}
