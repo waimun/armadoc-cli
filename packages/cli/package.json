@@ -19,10 +19,12 @@
   ],
   "dependencies": {
     "@armadoc/crypto": "0.1.0",
-    "@modelcontextprotocol/sdk": "^1.32.0",
-    "zod": "^4.6.5"
+    "@modelcontextprotocol/server": "^2.3.1"
   },
   "engines": {
     "node": ">=24"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.1"
   }
 }
