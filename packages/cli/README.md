@@ -10,7 +10,8 @@ plaintext never leave your machine.
 npm install -g armadoc
 ```
 
-Node 24 or later.
+Node 24 or later, and an MCP host to run it. On its own, the CLI only pairs this machine; to send
+and read documents yourself, use [armadoc.link](https://armadoc.link).
 
 ## Pair
 
@@ -26,15 +27,19 @@ it before.
 
 ## Add to an MCP host
 
-The server is `armadoc mcp`, over stdio. Hosts with a JSON config take:
+Claude Code:
 
-```json
-{
-  "mcpServers": {
-    "armadoc": { "command": "armadoc", "args": ["mcp"] }
-  }
-}
+```sh
+claude mcp add --scope user armadoc -- armadoc mcp
 ```
+
+Codex:
+
+```sh
+codex mcp add armadoc -- armadoc mcp
+```
+
+Any other host: the server is `armadoc mcp`, over stdio. Restart or reconnect the host to load it.
 
 Requests from the server include the name and version your MCP host reports for itself, so Armadoc
 can see which hosts are in use.

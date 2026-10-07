@@ -11,5 +11,4 @@ machine; the server only ever sees ciphertext.
 | [`@armadoc/crypto`](packages/crypto) | The encryption core, shared with the web app        |
 
 The canonical package is `armadoc`. Every release is published from this repository's
-`publish.yml` workflow with npm provenance; `npm audit signatures` verifies an installed copy
-against it.
+`publish.yml` workflow with npm provenance.
