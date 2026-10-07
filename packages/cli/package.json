@@ -2,6 +2,16 @@
   "name": "armadoc",
   "version": "0.1.0",
   "description": "The Armadoc CLI and local MCP server for end-to-end encrypted document sharing",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "ai-agent",
+    "encryption",
+    "end-to-end-encryption",
+    "e2ee",
+    "file-sharing"
+  ],
   "type": "module",
   "repository": {
     "type": "git",
