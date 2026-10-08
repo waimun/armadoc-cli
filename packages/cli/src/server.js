@@ -1,10 +1,10 @@
 import { fromJsonSchema, McpServer } from '@modelcontextprotocol/server'
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio'
 import pkg from '../package.json' with { type: 'json' }
-import { createClient, PairingError, userAgent } from './api.js'
-import { configDir, downloadDir, onStage, resolveStage } from './config.js'
+import { userAgent } from './api.js'
+import { configDir, downloadDir, resolveStage } from './config.js'
 import { DEFAULT_EXPIRY_SECS, listDocuments, readDocument, sendDocument } from './documents.js'
-import { readCredentials, readPrivateKey } from './store.js'
+import { createSession } from './session.js'
 
 const LINK_ID = '^[A-Za-z0-9]{1,64}$'
 
@@ -23,29 +23,13 @@ const failure = (error) => {
 
 export const createServer = (ctx) => {
   const { apiBase, webOrigin, stage } = resolveStage(ctx.env)
-  const dir = configDir(ctx.env, stage, ctx.home)
-  let client = null
-
-  const session = async ({ needsKey = false } = {}) => {
-    const credentials = await readCredentials(dir)
-    if (!credentials?.refreshToken) {
-      throw new PairingError(`Not logged in${onStage(stage, 'to')}; run \`armadoc login\``)
-    }
-
-    let privateKey = null
-    if (needsKey) {
-      privateKey = credentials.keyId ? await readPrivateKey(dir) : null
-      if (!privateKey) throw new PairingError('No key is enrolled; run `armadoc login` to finish')
-    }
-
-    client ??= createClient({
-      apiBase,
-      dir,
-      fetch: ctx.fetch,
-      userAgent: userAgent(server.server.getClientVersion())
-    })
-    return { client, credentials, privateKey }
-  }
+  const session = createSession({
+    apiBase,
+    stage,
+    dir: configDir(ctx.env, stage, ctx.home),
+    fetch: ctx.fetch,
+    userAgent: () => userAgent(server.server.getClientVersion())
+  })
 
   const handle = (operation) => async (args) => {
     try {
