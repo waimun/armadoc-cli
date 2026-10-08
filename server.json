@@ -3,7 +3,7 @@
   "name": "link.armadoc/armadoc",
   "title": "Armadoc",
   "description": "Send and read end-to-end encrypted documents. Your private key never leaves your machine.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "websiteUrl": "https://armadoc.link",
   "repository": {
     "url": "https://github.com/waimun/armadoc-cli",
@@ -15,7 +15,7 @@
     {
       "registryType": "npm",
       "identifier": "armadoc",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

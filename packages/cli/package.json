@@ -1,6 +1,6 @@
 {
   "name": "armadoc",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "The Armadoc CLI and local MCP server for end-to-end encrypted document sharing",
   "keywords": [
     "mcp",
@@ -28,7 +28,7 @@
     "!src/**/*.test.js"
   ],
   "dependencies": {
-    "@armadoc/crypto": "0.1.1",
+    "@armadoc/crypto": "0.2.0",
     "@modelcontextprotocol/server": "^2.3.1"
   },
   "engines": {
