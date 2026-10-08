@@ -1,8 +1,8 @@
 # armadoc
 
 The `armadoc` CLI and a local stdio MCP server for [Armadoc](https://armadoc.link) end-to-end
-encrypted document sharing. Your agent sends and reads documents as you; the private key and the
-plaintext never leave your machine.
+encrypted document sharing. Send and read documents from a terminal, or let your agent do it as
+you; the private key and the plaintext never leave your machine.
 
 ## Install
 
@@ -10,8 +10,7 @@ plaintext never leave your machine.
 npm install -g armadoc
 ```
 
-Node 24 or later, and an MCP host to run it. On its own, the CLI only pairs this machine; to send
-and read documents yourself, use [armadoc.link](https://armadoc.link).
+Node 24 or later. Or, without a global install, prefix each command with `npx`.
 
 ## Pair
 
@@ -25,7 +24,27 @@ it before.
 
 `armadoc status` shows the pairing.
 
-## Add to an MCP host
+## Send and read
+
+```sh
+armadoc send report.pdf notes.txt --to dustin@example.com --to-name "Dustin Burrows"
+armadoc ls
+armadoc read https://armadoc.link/v/<linkId>
+```
+
+`send` encrypts the files on this machine and sends them to one recipient, under the name you gave
+at login. A recipient with no Armadoc key yet is emailed an invite instead and nothing is uploaded;
+once they accept, run the same `send` again to complete it. `--expires 7d` sets how many days the
+link stays open, within your plan.
+
+`ls`, or `list`, shows what is still open in both directions; `--inbound` or `--outbound` narrows
+it. `read` takes the link from the email or just its id, and saves the files to
+`~/Downloads/armadoc/<linkId>`, or to `--dir`. It never overwrites a file.
+
+`list`, `read` and `send` take `--json` for output a script can parse. A refusal, such as a plan
+limit, goes to stderr with exit code 1.
+
+## Use from an agent
 
 Claude Code:
 
@@ -41,8 +60,8 @@ codex mcp add armadoc -- armadoc mcp
 
 Any other host: the server is `armadoc mcp`, over stdio. Restart or reconnect the host to load it.
 
-Requests from the server include the name and version your MCP host reports for itself, so Armadoc
-can see which hosts are in use.
+Requests say whether a command or the MCP server made them, and the server's include the name and
+version your MCP host reports for itself, so Armadoc can see how the client is used.
 
 The server has to run on your own computer, next to your MCP host. It won't work in cloud-hosted
 agents, because `armadoc login` needs a browser on the same machine. Even if it could pair there,

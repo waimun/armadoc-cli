@@ -1,9 +1,9 @@
 # armadoc-cli
 
 The local client for [Armadoc](https://armadoc.link) end-to-end encrypted document sharing: an
-`armadoc` CLI and a stdio MCP server that let an AI agent on your machine send and read documents
-as you. Decryption needs the private key and encryption needs the plaintext, so both stay on your
-machine; the server only ever sees ciphertext.
+`armadoc` CLI and a stdio MCP server that send and read documents as you, from a terminal or an AI
+agent on your machine. Decryption needs the private key and encryption needs the plaintext, so both
+stay on your machine; the server only ever sees ciphertext.
 
 | Package                              | Contents                                            |
 |--------------------------------------|-----------------------------------------------------|
