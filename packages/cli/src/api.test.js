@@ -5,13 +5,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import pkg from '../package.json' with { type: 'json' }
 import {
   ApiError,
+  CLI_USER_AGENT,
   createClient,
+  mcpUserAgent,
   PairingError,
   redeemCode,
   refreshGrant,
-  TokenError,
-  USER_AGENT,
-  userAgent
+  TokenError
 } from './api.js'
 import { readCredentials, writeCredentials } from './store.js'
 
@@ -47,19 +47,21 @@ const fakeFetch = (handler) => {
 const isToken = (call) => call.url === `${API}/oauth/token`
 const tokens = (n) => json(200, { access_token: `A${n}`, refresh_token: `R${n}` })
 
-it('names this client and its version in the User-Agent', () => {
-  expect(USER_AGENT).toBe(`armadoc-cli/${pkg.version}`)
+const PRODUCT = `armadoc-cli/${pkg.version}`
+
+it('names this client, its version and the CLI in the User-Agent', () => {
+  expect(CLI_USER_AGENT).toBe(`${PRODUCT} (cli)`)
 })
 
-it('adds the MCP host as a comment, reduced to token characters', () => {
-  expect(userAgent({ name: 'claude-ai', version: '0.12.0' })).toBe(
-    `${USER_AGENT} (mcp; claude-ai/0.12.0)`
+it('names the MCP server and its host, reduced to token characters', () => {
+  expect(mcpUserAgent({ name: 'claude-ai', version: '0.12.0' })).toBe(
+    `${PRODUCT} (mcp; claude-ai/0.12.0)`
   )
-  expect(userAgent({ name: 'Visual Studio Code (Insiders)' })).toBe(
-    `${USER_AGENT} (mcp; Visual-Studio-Code-Insiders-)`
+  expect(mcpUserAgent({ name: 'Visual Studio Code (Insiders)' })).toBe(
+    `${PRODUCT} (mcp; Visual-Studio-Code-Insiders-)`
   )
-  expect(userAgent({ name: 'x'.repeat(100) })).toBe(`${USER_AGENT} (mcp; ${'x'.repeat(64)})`)
-  expect(userAgent(undefined)).toBe(USER_AGENT)
+  expect(mcpUserAgent({ name: 'x'.repeat(100) })).toBe(`${PRODUCT} (mcp; ${'x'.repeat(64)})`)
+  expect(mcpUserAgent(undefined)).toBe(`${PRODUCT} (mcp)`)
 })
 
 describe('token grants', () => {
@@ -71,13 +73,14 @@ describe('token grants', () => {
       code: 'C',
       verifier: 'V',
       redirectUri: 'http://127.0.0.1:5000/callback',
-      fetch
+      fetch,
+      userAgent: CLI_USER_AGENT
     })
 
     expect(result).toMatchObject({ accessToken: 'A1', refreshToken: 'R1' })
     expect(Date.parse(result.refreshExpiresAt) - Date.now()).toBeGreaterThan(29 * 86_400_000)
     expect(calls[0].method).toBe('POST')
-    expect(calls[0].headers['User-Agent']).toBe(USER_AGENT)
+    expect(calls[0].headers['User-Agent']).toBe(CLI_USER_AGENT)
     expect(Object.fromEntries(calls[0].body)).toEqual({
       grant_type: 'authorization_code',
       code: 'C',
@@ -119,7 +122,13 @@ describe('token grants', () => {
 describe('createClient', () => {
   it('sends the bearer token and returns the data', async () => {
     const { fetch, calls } = fakeFetch(() => json(200, { links: [] }))
-    const client = createClient({ apiBase: API, dir, accessToken: 'A0', fetch })
+    const client = createClient({
+      apiBase: API,
+      dir,
+      accessToken: 'A0',
+      fetch,
+      userAgent: CLI_USER_AGENT
+    })
 
     expect(await client.get('/me/inventory', { direction: 'inbound' })).toEqual({
       ok: true,
@@ -127,7 +136,7 @@ describe('createClient', () => {
     })
     expect(calls[0].url).toBe(`${API}/me/inventory?direction=inbound`)
     expect(calls[0].headers).toMatchObject({
-      'User-Agent': USER_AGENT,
+      'User-Agent': CLI_USER_AGENT,
       Authorization: 'Bearer A0'
     })
   })

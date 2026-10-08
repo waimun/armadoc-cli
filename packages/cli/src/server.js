@@ -1,7 +1,7 @@
 import { fromJsonSchema, McpServer } from '@modelcontextprotocol/server'
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio'
 import pkg from '../package.json' with { type: 'json' }
-import { userAgent } from './api.js'
+import { mcpUserAgent } from './api.js'
 import { configDir, downloadDir, resolveStage } from './config.js'
 import { DEFAULT_EXPIRY_SECS, listDocuments, readDocument, sendDocument } from './documents.js'
 import { createSession } from './session.js'
@@ -28,7 +28,7 @@ export const createServer = (ctx) => {
     stage,
     dir: configDir(ctx.env, stage, ctx.home),
     fetch: ctx.fetch,
-    userAgent: () => userAgent(server.server.getClientVersion())
+    userAgent: () => mcpUserAgent(server.server.getClientVersion())
   })
 
   const handle = (operation) => async (args) => {

@@ -86,6 +86,17 @@ describe('login', () => {
     expect(output.out.at(-1)).toMatch(/^Logged in to dev as "armadoc CLI on mbp"/)
   })
 
+  it('names the CLI in the User-Agent of every request', async () => {
+    const { ctx, output } = context()
+
+    expect(await run(['login'], ctx)).toBe(0)
+
+    expect(output.requests.map((request) => request.headers['User-Agent'])).toEqual([
+      `armadoc-cli/${pkg.version} (cli)`,
+      `armadoc-cli/${pkg.version} (cli)`
+    ])
+  })
+
   it('in a terminal, prints the URL and withdraws the prompt when another browser pairs', async () => {
     const { ctx, output } = context()
     let signal

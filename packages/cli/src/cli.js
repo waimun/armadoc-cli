@@ -4,7 +4,7 @@ import { createInterface } from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { generateKeyPair } from '@armadoc/crypto'
 import pkg from '../package.json' with { type: 'json' }
-import { createClient, PairingError, redeemCode, TokenError } from './api.js'
+import { CLI_USER_AGENT, createClient, PairingError, redeemCode, TokenError } from './api.js'
 import { configDir, onStage, resolveStage } from './config.js'
 import {
   authorizeUrl,
@@ -102,7 +102,8 @@ const pair = async (ctx, { apiBase, webOrigin, label }) => {
       code,
       verifier,
       redirectUri: callback.redirectUri,
-      fetch: ctx.fetch
+      fetch: ctx.fetch,
+      userAgent: CLI_USER_AGENT
     })
   } catch (error) {
     if (error instanceof TokenError && error.error === 'invalid_grant') {
@@ -145,7 +146,13 @@ const login = async (ctx, options) => {
     accessToken = tokens.accessToken
   }
 
-  const client = createClient({ apiBase, dir, accessToken, fetch: ctx.fetch })
+  const client = createClient({
+    apiBase,
+    dir,
+    accessToken,
+    fetch: ctx.fetch,
+    userAgent: CLI_USER_AGENT
+  })
   const enrolled = await client.post('/me/keys', {
     publicKey,
     label: credentials.label,

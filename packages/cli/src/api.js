@@ -1,18 +1,19 @@
 import pkg from '../package.json' with { type: 'json' }
 import { withRefreshLock, writeCredentials } from './store.js'
 
-export const USER_AGENT = `armadoc-cli/${pkg.version}`
+const PRODUCT = `armadoc-cli/${pkg.version}`
+
+export const CLI_USER_AGENT = `${PRODUCT} (cli)`
 
 const token = (value) =>
   String(value)
     .replace(/[^A-Za-z0-9._-]+/g, '-')
     .slice(0, 64)
 
-// Appends the MCP host, as named in its clientInfo.
-export const userAgent = (host) => {
-  if (!host?.name) return USER_AGENT
+export const mcpUserAgent = (host) => {
+  if (!host?.name) return `${PRODUCT} (mcp)`
   const version = host.version ? `/${token(host.version)}` : ''
-  return `${USER_AGENT} (mcp; ${token(host.name)}${version})`
+  return `${PRODUCT} (mcp; ${token(host.name)}${version})`
 }
 
 const REFRESH_TIMEOUT_MS = 10_000
@@ -49,7 +50,7 @@ const readBody = async (response) => {
   }
 }
 
-const tokenGrant = async ({ apiBase, params, fetch, signal, userAgent = USER_AGENT }) => {
+const tokenGrant = async ({ apiBase, params, fetch, signal, userAgent }) => {
   const response = await fetch(`${apiBase}/oauth/token`, {
     method: 'POST',
     headers: { 'User-Agent': userAgent },
@@ -73,10 +74,18 @@ const tokenGrant = async ({ apiBase, params, fetch, signal, userAgent = USER_AGE
   }
 }
 
-export const redeemCode = ({ apiBase, code, verifier, redirectUri, fetch = globalThis.fetch }) =>
+export const redeemCode = ({
+  apiBase,
+  code,
+  verifier,
+  redirectUri,
+  fetch = globalThis.fetch,
+  userAgent
+}) =>
   tokenGrant({
     apiBase,
     fetch,
+    userAgent,
     params: {
       grant_type: 'authorization_code',
       code,
@@ -105,7 +114,7 @@ export const createClient = ({
   dir,
   accessToken = null,
   fetch = globalThis.fetch,
-  userAgent = USER_AGENT
+  userAgent
 }) => {
   let current = accessToken
   let inflight = null
