@@ -357,6 +357,21 @@ describe('send and read', () => {
     expect(output.err).toEqual(['Refused: Expiry exceeds your plan'])
   })
 
+  it('prints the failed step and its cause', async () => {
+    await writeFile(join(home, 'a.txt'), 'hello')
+    const { ctx, output } = await documents()
+    const respond = ctx.fetch
+    ctx.fetch = (url, init) => {
+      if (url.startsWith(S3)) {
+        throw new TypeError('fetch failed', { cause: new Error('read ECONNRESET') })
+      }
+      return respond(url, init)
+    }
+
+    expect(await run(SEND, ctx)).toBe(1)
+    expect(output.err).toEqual(['Uploading "a.txt" failed: read ECONNRESET'])
+  })
+
   it('prints the result as JSON on request', async () => {
     await writeFile(join(home, 'a.txt'), 'hello')
     const { ctx, output } = await documents()

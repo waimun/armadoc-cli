@@ -37,6 +37,16 @@ export class TokenError extends Error {
 
 export class PairingError extends Error {}
 
+export class NetworkError extends Error {}
+
+export const fetchStep = async (step, request) => {
+  try {
+    return await request()
+  } catch (error) {
+    throw new NetworkError(`${step} failed`, { cause: error.cause ?? error })
+  }
+}
+
 const failed = (method, path, status, data) =>
   `${method} ${path} failed (${[status, data?.code].filter(Boolean).join(', ')})`
 
@@ -50,13 +60,15 @@ const readBody = async (response) => {
   }
 }
 
-const tokenGrant = async ({ apiBase, params, fetch, signal, userAgent }) => {
-  const response = await fetch(`${apiBase}/oauth/token`, {
-    method: 'POST',
-    headers: { 'User-Agent': userAgent },
-    body: new URLSearchParams(params),
-    signal
-  })
+const tokenGrant = async ({ apiBase, step, params, fetch, signal, userAgent }) => {
+  const response = await fetchStep(step, () =>
+    fetch(`${apiBase}/oauth/token`, {
+      method: 'POST',
+      headers: { 'User-Agent': userAgent },
+      body: new URLSearchParams(params),
+      signal
+    })
+  )
   const body = await readBody(response)
 
   if (!response.ok) {
@@ -84,6 +96,7 @@ export const redeemCode = ({
 }) =>
   tokenGrant({
     apiBase,
+    step: 'Redeeming the pairing code',
     fetch,
     userAgent,
     params: {
@@ -103,6 +116,7 @@ export const refreshGrant = ({
 }) =>
   tokenGrant({
     apiBase,
+    step: 'Refreshing the pairing',
     fetch,
     userAgent,
     params: { grant_type: 'refresh_token', refresh_token: refreshToken },
@@ -156,16 +170,18 @@ export const createClient = ({
     current = await inflight
   }
 
-  const send = (method, url, body) =>
-    fetch(url, {
-      method,
-      headers: {
-        'User-Agent': userAgent,
-        Authorization: `Bearer ${current}`,
-        ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
-      },
-      body: body === undefined ? undefined : JSON.stringify(body)
-    })
+  const send = (method, path, url, body) =>
+    fetchStep(`${method} ${path}`, () =>
+      fetch(url, {
+        method,
+        headers: {
+          'User-Agent': userAgent,
+          Authorization: `Bearer ${current}`,
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
+        },
+        body: body === undefined ? undefined : JSON.stringify(body)
+      })
+    )
 
   const request = async (method, path, { query, body } = {}) => {
     const search = query ? `?${new URLSearchParams(query)}` : ''
@@ -173,10 +189,10 @@ export const createClient = ({
 
     if (current === null) await refresh(null)
     const token = current
-    let response = await send(method, url, body)
+    let response = await send(method, path, url, body)
     if (response.status === 401) {
       await refresh(token)
-      response = await send(method, url, body)
+      response = await send(method, path, url, body)
     }
 
     const data = await readBody(response)

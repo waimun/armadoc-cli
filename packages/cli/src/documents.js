@@ -7,7 +7,7 @@ import {
   sealFile,
   unwrapFileKey
 } from '@armadoc/crypto'
-import { ApiError } from './api.js'
+import { ApiError, fetchStep } from './api.js'
 import { expandHome } from './config.js'
 
 export const DEFAULT_EXPIRY_SECS = 864_000
@@ -56,14 +56,15 @@ const fetchLink = async (client, linkId) => {
   }
 }
 
-const download = async ({ client, fetch, linkId, url }) => {
+const download = async ({ client, fetch, linkId, url, name }) => {
   const k = url.split('/').pop()
   const signed = await client.get('/generate-download-url', { k, linkId })
   if (!signed.ok) return signed
 
-  const response = await fetch(signed.data.url)
+  const step = `Downloading "${name}"`
+  const response = await fetchStep(step, () => fetch(signed.data.url))
   if (!response.ok) throw new DocumentError(`Download failed (status ${response.status})`)
-  return { ok: true, data: new Uint8Array(await response.arrayBuffer()) }
+  return { ok: true, data: new Uint8Array(await fetchStep(step, () => response.arrayBuffer())) }
 }
 
 export const readDocument = async ({
@@ -101,7 +102,7 @@ export const readDocument = async ({
     const path = join(directory, file.fileName)
     const fileKey = await unwrapFileKey(file.wrap, privateKey)
 
-    const payload = await download({ client, fetch, linkId, url: file.url })
+    const payload = await download({ client, fetch, linkId, url: file.url, name: file.fileName })
     if (!payload.ok) return deny(payload)
 
     let plaintext
@@ -162,7 +163,9 @@ const upload = async ({ client, fetch, payload, name }) => {
   for (const [field, value] of Object.entries(fields)) form.append(field, value)
   form.append('file', new Blob([payload], { type: 'application/octet-stream' }))
 
-  const response = await fetch(url, { method: 'POST', body: form })
+  const response = await fetchStep(`Uploading "${name}"`, () =>
+    fetch(url, { method: 'POST', body: form })
+  )
   if (!response.ok) {
     const body = await response.text().catch(() => '')
     if (body.includes('EntityTooLarge')) {

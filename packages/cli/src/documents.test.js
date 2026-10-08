@@ -22,7 +22,11 @@ const json = (status, body) => new Response(JSON.stringify(body), { status })
 
 const EMPTY = { awaitingAcceptance: [], awaitingUpload: [], active: [] }
 
-const backend = ({ keys = [], store, upload, awaitingUpload = [], invite } = {}) => {
+const reset = () => {
+  throw new TypeError('fetch failed', { cause: new Error('read ECONNRESET') })
+}
+
+const backend = ({ keys = [], store, upload, download, awaitingUpload = [], invite } = {}) => {
   const state = { objects: new Map(), links: new Map(), invites: [], requests: [], uploads: 0 }
 
   const fetch = async (url, init = {}) => {
@@ -35,6 +39,7 @@ const backend = ({ keys = [], store, upload, awaitingUpload = [], invite } = {})
       state.objects.set(init.body.get('key'), bytes)
       return new Response(null, { status: 204 })
     }
+    if (origin === S3 && download) return download()
     if (origin === S3) return new Response(state.objects.get(pathname.slice(1)))
 
     switch (pathname.replace('/v1', '')) {
@@ -308,6 +313,15 @@ describe('sendDocument', () => {
       reason: '"a.pdf" exceeds the maximum file size on your plan'
     })
   })
+
+  it('names the file when the connection drops during an upload', async () => {
+    const api = backend({ keys: [recipient], upload: reset })
+
+    await expect(send(api, [await file('a.pdf', 'x')])).rejects.toMatchObject({
+      message: 'Uploading "a.pdf" failed',
+      cause: { message: 'read ECONNRESET' }
+    })
+  })
 })
 
 describe('listDocuments', () => {
@@ -322,6 +336,36 @@ describe('listDocuments', () => {
       data: {
         inbound: { ...rows, active: [{ expiresAt: '1970-01-01T00:00:00.000Z' }] }
       }
+    })
+  })
+})
+
+describe('readDocument', () => {
+  it('names the file when the connection drops during a download', async () => {
+    const key = await recipientKey()
+    const api = backend({ keys: [{ keyId: key.keyId, publicKey: key.publicKey }], download: reset })
+    await send(api, [await file('a.pdf', 'x')])
+
+    await expect(read(api, key)).rejects.toMatchObject({
+      message: 'Downloading "a.pdf" failed',
+      cause: { message: 'read ECONNRESET' }
+    })
+  })
+
+  it('names the file when the connection drops partway through a download', async () => {
+    const key = await recipientKey()
+    const body = new ReadableStream({
+      start: (controller) => controller.error(new Error('aborted'))
+    })
+    const api = backend({
+      keys: [{ keyId: key.keyId, publicKey: key.publicKey }],
+      download: () => new Response(body)
+    })
+    await send(api, [await file('a.pdf', 'x')])
+
+    await expect(read(api, key)).rejects.toMatchObject({
+      message: 'Downloading "a.pdf" failed',
+      cause: { message: 'aborted' }
     })
   })
 })

@@ -8,6 +8,7 @@ import {
   CLI_USER_AGENT,
   createClient,
   mcpUserAgent,
+  NetworkError,
   PairingError,
   redeemCode,
   refreshGrant,
@@ -115,7 +116,10 @@ describe('token grants', () => {
 
     await expect(
       refreshGrant({ apiBase: API, refreshToken: 'R1', fetch, timeoutMs: 20 })
-    ).rejects.toMatchObject({ name: 'TimeoutError' })
+    ).rejects.toMatchObject({
+      message: 'Refreshing the pairing failed',
+      cause: { name: 'TimeoutError' }
+    })
   })
 })
 
@@ -229,6 +233,35 @@ describe('createClient', () => {
     await Promise.all([client.get('/a'), client.get('/b'), client.get('/c')])
 
     expect(calls.filter(isToken)).toHaveLength(1)
+  })
+
+  it('names the request when the connection drops', async () => {
+    const { fetch } = fakeFetch(() => {
+      throw new TypeError('fetch failed', { cause: new Error('read ECONNRESET') })
+    })
+    const client = createClient({ apiBase: API, dir, accessToken: 'A0', fetch })
+
+    const failure = client.post('/store-encrypted-key', {})
+
+    await expect(failure).rejects.toThrow(NetworkError)
+    await expect(failure).rejects.toMatchObject({
+      message: 'POST /store-encrypted-key failed',
+      cause: { message: 'read ECONNRESET' }
+    })
+  })
+
+  it('names the refresh when its connection drops', async () => {
+    await writeCredentials(dir, CREDENTIALS)
+    const { fetch } = fakeFetch(() => {
+      throw new TypeError('fetch failed', { cause: new Error('getaddrinfo ENOTFOUND') })
+    })
+    const client = createClient({ apiBase: API, dir, fetch })
+
+    await expect(client.get('/me/inventory')).rejects.toMatchObject({
+      message: 'Refreshing the pairing failed',
+      cause: { message: 'getaddrinfo ENOTFOUND' }
+    })
+    expect(await readCredentials(dir)).toEqual(CREDENTIALS)
   })
 
   it('asks for a login when nothing is paired', async () => {
