@@ -1,11 +1,14 @@
 import { spawn } from 'node:child_process'
 import { homedir, hostname } from 'node:os'
+import { resolve } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 import { generateKeyPair } from '@armadoc/crypto'
 import pkg from '../package.json' with { type: 'json' }
 import { CLI_USER_AGENT, createClient, PairingError, redeemCode, TokenError } from './api.js'
-import { configDir, onStage, resolveStage } from './config.js'
+import { configDir, downloadDir, expandHome, onStage, resolveStage } from './config.js'
+import { listDocuments, readDocument, sendDocument } from './documents.js'
+import { describeList, describeRead, describeSend } from './format.js'
 import {
   authorizeUrl,
   createPkce,
@@ -15,6 +18,7 @@ import {
   MAX_LABEL_LENGTH
 } from './pairing.js'
 import { serve } from './server.js'
+import { createSession } from './session.js'
 import {
   clearStage,
   readCredentials,
@@ -26,14 +30,36 @@ import {
 
 const NAME_PATTERN = /^[A-Za-z\s'-]{2,50}$/
 const NAME_RULE = "2 to 50 characters: letters, spaces, ' and -"
+const LINK_ID = /^[A-Za-z0-9]{1,64}$/
+const VIEWER_PATH = /^\/v\/([A-Za-z0-9]{1,64})\/?$/
+const EXPIRY = /^([1-9]\d*)d$/
+const DAY_SECS = 86_400
 
 const USAGE = `Usage:
   armadoc login [--label <label>] [--name <name>]  Pair this machine and enroll a key
   armadoc logout                                   Delete the local credentials
   armadoc status                                   Show the pairing
+  armadoc list|ls [--inbound|--outbound] [--json]  List the documents still open
+  armadoc read <link> [--dir <dir>] [--json]       Decrypt a document and save its files
+  armadoc send <file>... --to <email> --to-name <name> [--expires <days>d] [--json]
+                                                   Encrypt files and send them to one recipient
   armadoc mcp                                      Run the MCP server, for an MCP host to start`
 
 export class UsageError extends Error {}
+
+export const parseLink = (link, webOrigin) => {
+  if (LINK_ID.test(link)) return link
+  const url = URL.parse(link)
+  const linkId = url?.origin === webOrigin ? url.pathname.match(VIEWER_PATH)?.[1] : undefined
+  if (!linkId) throw new UsageError(`${link} is not a document link from ${webOrigin}`)
+  return linkId
+}
+
+export const parseExpiry = (value) => {
+  const match = EXPIRY.exec(value.trim())
+  if (!match) throw new UsageError('--expires must be a number of days, like 7d')
+  return Number(match[1]) * DAY_SECS
+}
 
 const checkLabel = (label) => {
   const trimmed = label.trim()
@@ -226,16 +252,105 @@ const status = async (ctx) => {
   return credentials ? 0 : 1
 }
 
-const COMMANDS = { login, logout, status, mcp: serve }
+const connect = (ctx) => {
+  const { stage, apiBase, webOrigin, dir } = locate(ctx)
+  const session = createSession({
+    apiBase,
+    stage,
+    dir,
+    fetch: ctx.fetch,
+    userAgent: () => CLI_USER_AGENT
+  })
+  return { webOrigin, session }
+}
+
+const report = (ctx, options, result, describe) => {
+  if (!result.ok) {
+    ctx.err(`Refused: ${result.reason}`)
+    return 1
+  }
+  ctx.out(options.json ? JSON.stringify(result.data, null, 2) : describe(result.data))
+  return 0
+}
+
+const fromCwd = (ctx, path) => resolve(ctx.cwd, expandHome(path, ctx.home))
+
+const list = async (ctx, options) => {
+  const chosen = ['inbound', 'outbound'].filter((direction) => options[direction])
+  const direction = chosen.length === 1 ? chosen[0] : undefined
+  const { session } = connect(ctx)
+  const { client } = await session()
+  return report(ctx, options, await listDocuments({ client, direction }), describeList)
+}
+
+const read = async (ctx, options, [link]) => {
+  const { webOrigin, session } = connect(ctx)
+  const linkId = parseLink(link, webOrigin)
+  const directory = downloadDir(
+    ctx.env,
+    { linkId, directory: options.dir === undefined ? undefined : fromCwd(ctx, options.dir) },
+    ctx.home
+  )
+  const { client, credentials, privateKey } = await session({ needsKey: true })
+  const result = await readDocument({
+    client,
+    fetch: ctx.fetch,
+    keyId: credentials.keyId,
+    privateKey,
+    linkId,
+    directory,
+    webOrigin
+  })
+  return report(ctx, options, result, describeRead)
+}
+
+const send = async (ctx, options, paths) => {
+  if (!options.to || !options['to-name']) {
+    throw new UsageError("Pass --to with the recipient's email and --to-name with their name")
+  }
+  const expirySecs = options.expires === undefined ? undefined : parseExpiry(options.expires)
+  const { session } = connect(ctx)
+  const { client, credentials } = await session()
+  const result = await sendDocument({
+    client,
+    fetch: ctx.fetch,
+    senderName: credentials.senderName,
+    paths: paths.map((path) => fromCwd(ctx, path)),
+    recipient: { name: options['to-name'].trim(), email: options.to.trim() },
+    expirySecs,
+    home: ctx.home
+  })
+  return report(ctx, options, result, describeSend)
+}
+
+const STRING = { type: 'string' }
+const FLAG = { type: 'boolean' }
+
+const LIST = { run: list, options: { inbound: FLAG, outbound: FLAG, json: FLAG } }
+
+const COMMANDS = {
+  login: { run: login, options: { label: STRING, name: STRING } },
+  logout: { run: logout },
+  status: { run: status },
+  list: LIST,
+  ls: LIST,
+  read: { run: read, options: { dir: STRING, json: FLAG }, args: [1, 1] },
+  send: {
+    run: send,
+    options: { to: STRING, 'to-name': STRING, expires: STRING, json: FLAG },
+    args: [1, Number.POSITIVE_INFINITY]
+  },
+  mcp: { run: serve }
+}
 
 export const run = async (argv, ctx) => {
   try {
+    const command = Object.hasOwn(COMMANDS, argv[0]) ? COMMANDS[argv[0]] : null
     const { values, positionals } = parseArgs({
       args: argv,
       allowPositionals: true,
       options: {
-        label: { type: 'string' },
-        name: { type: 'string' },
+        ...command?.options,
         help: { type: 'boolean', short: 'h' },
         version: { type: 'boolean', short: 'v' }
       }
@@ -245,18 +360,19 @@ export const run = async (argv, ctx) => {
       ctx.out(pkg.version)
       return 0
     }
-
-    const [command, ...rest] = positionals
     if (values.help) {
       ctx.out(USAGE)
       return 0
     }
-    if (!Object.hasOwn(COMMANDS, command) || rest.length > 0) {
+
+    const args = positionals.slice(1)
+    const [min, max] = command?.args ?? [0, 0]
+    if (!command || args.length < min || args.length > max) {
       ctx.err(USAGE)
       return 1
     }
 
-    return await COMMANDS[command](ctx, values)
+    return await command.run(ctx, values, args)
   } catch (error) {
     const cause = error.cause?.message
     ctx.err(cause ? `${error.message}: ${cause}` : error.message)
@@ -293,6 +409,7 @@ export const main = async () => {
   process.exitCode = await run(process.argv.slice(2), {
     env: process.env,
     home: homedir(),
+    cwd: process.cwd(),
     hostname: hostname(),
     fetch: globalThis.fetch,
     interactive: Boolean(process.stdin.isTTY),
