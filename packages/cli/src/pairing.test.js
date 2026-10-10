@@ -27,7 +27,7 @@ describe('defaultLabel', () => {
 })
 
 describe('authorizeUrl', () => {
-  it('opens the consent page with the loopback callback and an S256 challenge', () => {
+  it('opens the consent page as armadoc-cli with the loopback callback and an S256 challenge', () => {
     const url = new URL(
       authorizeUrl({
         webOrigin: 'https://dev.armadoc.link',
@@ -40,6 +40,7 @@ describe('authorizeUrl', () => {
 
     expect(url.origin + url.pathname).toBe('https://dev.armadoc.link/oauth/authorize/')
     expect(Object.fromEntries(url.searchParams)).toEqual({
+      client_id: 'armadoc-cli',
       redirect_uri: 'http://127.0.0.1:5000/callback',
       code_challenge: 'C',
       code_challenge_method: 'S256',

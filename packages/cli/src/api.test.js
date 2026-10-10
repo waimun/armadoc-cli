@@ -66,7 +66,7 @@ it('names the MCP server and its host, reduced to token characters', () => {
 })
 
 describe('token grants', () => {
-  it('redeems a code, form-encoded', async () => {
+  it('redeems a code as armadoc-cli, form-encoded', async () => {
     const { fetch, calls } = fakeFetch(() => tokens(1))
 
     const result = await redeemCode({
@@ -83,6 +83,7 @@ describe('token grants', () => {
     expect(calls[0].method).toBe('POST')
     expect(calls[0].headers['User-Agent']).toBe(CLI_USER_AGENT)
     expect(Object.fromEntries(calls[0].body)).toEqual({
+      client_id: 'armadoc-cli',
       grant_type: 'authorization_code',
       code: 'C',
       code_verifier: 'V',
@@ -193,6 +194,7 @@ describe('createClient', () => {
     await client.get('/me/inventory')
 
     expect(Object.fromEntries(calls[0].body)).toEqual({
+      client_id: 'armadoc-cli',
       grant_type: 'refresh_token',
       refresh_token: 'R1'
     })

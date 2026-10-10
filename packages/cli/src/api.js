@@ -5,6 +5,8 @@ const PRODUCT = `armadoc-cli/${pkg.version}`
 
 export const CLI_USER_AGENT = `${PRODUCT} (cli)`
 
+export const CLIENT_ID = 'armadoc-cli'
+
 const token = (value) =>
   String(value)
     .replace(/[^A-Za-z0-9._-]+/g, '-')
@@ -65,7 +67,7 @@ const tokenGrant = async ({ apiBase, step, params, fetch, signal, userAgent }) =
     fetch(`${apiBase}/oauth/token`, {
       method: 'POST',
       headers: { 'User-Agent': userAgent },
-      body: new URLSearchParams(params),
+      body: new URLSearchParams({ client_id: CLIENT_ID, ...params }),
       signal
     })
   )

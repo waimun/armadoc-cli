@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { createServer } from 'node:http'
+import { CLIENT_ID } from './api.js'
 
 export const MAX_LABEL_LENGTH = 64
 
@@ -18,6 +19,7 @@ export const defaultLabel = (hostname) => `armadoc CLI on ${hostname}`.slice(0, 
 export const authorizeUrl = ({ webOrigin, redirectUri, challenge, state, label }) => {
   const url = new URL('/oauth/authorize/', webOrigin)
   url.search = new URLSearchParams({
+    client_id: CLIENT_ID,
     redirect_uri: redirectUri,
     code_challenge: challenge,
     code_challenge_method: 'S256',
